@@ -1,5 +1,5 @@
 from env_loader import load_env
-"""凌夏 — 工具定义与实现（Function Calling 格式）"""
+"""CC — 工具定义与实现（Function Calling 格式）"""
 import json, logging, os, urllib.request, sys
 from datetime import datetime
 
@@ -558,7 +558,7 @@ class ToolExecutor:
             "Content-Type": "application/json",
         }
         body = {
-            "user": {"uid": "lingxia_voice"},
+            "user": {"uid": "cc_voice"},
             "req_params": {
                 "text": text,
                 "speaker": self._VOLC_VOICE_TYPE,

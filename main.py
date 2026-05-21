@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CC v9 — 凌夏架构 + 对话摘要 + 群聊主动发言 + 反幻觉"""
+"""CC v1 — CC架构 + 对话摘要 + 群聊主动发言 + 反幻觉"""
 import sys, os, asyncio, hashlib, logging, random, time
 from datetime import datetime, timedelta
 
@@ -37,7 +37,7 @@ KW_AD = ["彩票","博彩","赌博","上分","下注","盘口","日入","躺赚"
          "骰子","牌局","扑克","Welcome to","马上赢","翻倍","半小时一千",
          "日结","日薪","无流水"]
 
-# v9: 只保留活跃群，去掉了导致幻觉的测试群
+# v1: 只保留活跃群，去掉了导致幻觉的测试群
 MONITORED_GROUPS = {
     -1003856120684: '悦享会',
     -1003753780022: '悦享之家',
@@ -146,7 +146,7 @@ async def main():
     await tc.start()
     me = await tc.get_me()
     cc_username = me.usernames[0].username if me.usernames else None
-    logger.info(f"CC v9 | {me.first_name} @{cc_username} (id={me.id})")
+    logger.info(f"CC v1 | {me.first_name} @{cc_username} (id={me.id})")
 
     executor = ToolExecutor(tc, DIARY, 0, memory)
     agent = CCAgent(tc, DIARY, 0, memory, executor)
@@ -238,7 +238,7 @@ async def main():
         except Exception as e:
             logger.error(f"@回复失败: {e}")
 
-    logger.info("CC v9: 对话记忆升级 + 群聊主动发言 + 反幻觉 + 红包")
+    logger.info("CC v1: 对话记忆升级 + 群聊主动发言 + 反幻觉 + 红包")
     
 
         except Exception as e:
@@ -259,7 +259,7 @@ if __name__ == "__main__":
             if "database is locked" in str(e):
                 for sfx in ["-wal","-shm"]:
                     try:
-                        os.remove(os.path.join(os.path.dirname(__file__), "lingxia.db"+sfx))
+                        os.remove(os.path.join(os.path.dirname(__file__), "ccbot.db"+sfx))
                     except:
                         pass
             import time; time.sleep(10)

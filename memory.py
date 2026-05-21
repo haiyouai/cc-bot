@@ -1,9 +1,9 @@
-"""凌夏记忆模块 v2 — SQLite长期记忆 + JSON缓存 + 自动萃取 + 对话摘要"""
+"""CC记忆模块 v2 — SQLite长期记忆 + JSON缓存 + 自动萃取 + 对话摘要"""
 import json, os, sqlite3, time, re
 from datetime import datetime
 
 HOME = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(HOME, "lingxia.db")
+DB_PATH = os.path.join(HOME, "ccbot.db")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
@@ -202,7 +202,7 @@ class MemoryManager:
             conn = _get_db()
             conn.execute(
                 "INSERT OR IGNORE INTO knowledge (fact, source, confidence, tags) VALUES (?,?,?,?)",
-                (text[:500], "凌夏自动记录", 0.5, '["auto"]')
+                (text[:500], "CC自动记录", 0.5, '["auto"]')
             )
             conn.commit()
             conn.close()
