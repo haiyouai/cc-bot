@@ -1,5 +1,5 @@
 from env_loader import load_env
-"""CC — 工具定义与实现（Function Calling 格式）"""
+"""凌夏 — 工具定义与实现（Function Calling 格式）"""
 import json, logging, os, urllib.request, sys
 from datetime import datetime
 
@@ -94,7 +94,10 @@ TOOL_SCHEMAS = [
     {"type":"function","function":{"name":"check_address","description":"查询任意TRC20地址的余额（TRX和USDT）和最近交易记录","parameters":{"type":"object","properties":{"address":{"type":"string","description":"TRC20地址（T开头）"}},"required":["address"]}}},
     {"type":"function","function":{"name":"crypto_price","description":"查询加密货币的实时价格、24小时涨跌幅等信息，支持BTC、ETH、USDT等主流币","parameters":{"type":"object","properties":{"coin":{"type":"string","description":"币种符号，如 btc、eth、sol、doge 等"},"currency":{"type":"string","description":"计价货币，默认usd，也支持cny"}},"required":["coin"]}}},
     {"type":"function","function":{"name":"check_tx","description":"查询TRC20交易的详细信息，包括转账金额、状态、时间","parameters":{"type":"object","properties":{"txid":{"type":"string","description":"交易哈希（txid）"}},"required":["txid"]}}},
-    {"type":"function","function":{"name":"generate_music","description":"根据描述生成音乐/歌曲，支持指定风格（流行、民谣、电子、古典、说唱、爵士等）、主题和情绪。返回音频链接。","parameters":{"type":"object","properties":{"prompt":{"type":"string","description":"音乐描述，含风格、情绪、主题等信息"},"lyrics":{"type":"string","description":"可选歌词文本，不传则AI自动生成"},"instrumental":{"type":"boolean","description":"纯音乐模式，无歌词"}},"required":["prompt"]}}}},
+    {"type":"function","function":{"name":"generate_music","description":"根据描述生成音乐/歌曲，支持指定风格（流行、民谣、电子、古典、说唱、爵士等）、主题和情绪。返回音频链接。","parameters":{"type":"object","properties":{"prompt":{"type":"string","description":"音乐描述，含风格、情绪、主题等信息"},"lyrics":{"type":"string","description":"可选歌词文本，不传则AI自动生成"},"instrumental":{"type":"boolean","description":"纯音乐模式，无歌词"}},"required":["prompt"]}}},
+
+
+    {"type":"function","function":{"name":"send_redpacket","description":"send red packet with inline claim button","parameters":{"type":"object","properties":{"chat_id":{"type":"integer","description":"chat id"},"total_amount":{"type":"number","description":"total amount USD"},"count":{"type":"integer","description":"number of packets"},"text":{"type":"string","description":"message"}},"required":["chat_id","total_amount","count"]}}},
 ]
 class ToolExecutor:
     """执行 AI 选择的工具"""
@@ -259,13 +262,37 @@ class ToolExecutor:
         return f"❌ 广播失败: {broadcast}"
 
     async def _web_search(self, query, count=5):
-        """联网搜索 - Bing + Google 双引擎"""
+        """联网搜索 - DuckDuckGo 主引擎 + Bing 备用"""
         try:
             from urllib.request import Request, urlopen
             from urllib.parse import quote, parse_qs, urlparse
             import re, html as html_mod
 
-            # 主引擎: Bing
+            # 主引擎：DuckDuckGo（反爬友好）
+            try:
+                url = "https://html.duckduckgo.com/html/?q=" + quote(query) + "&t=h_"
+                req = Request(url, headers={
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+                })
+                resp = urlopen(req, timeout=10)
+                content = resp.read().decode("utf-8", errors="replace")
+
+                results = re.findall(r'<a[^>]*class="result__a"[^>]*href="([^"]*)"[^>]*>([^<]*)</a>', content)
+                snippets = re.findall(r'<a[^>]*class="result__snippet"[^>]*>(.*?)</a>', content)
+                
+                if results:
+                    lines = []
+                    for i, (href, title) in enumerate(results[:count]):
+                        title_clean = html_mod.unescape(re.sub(r'<[^>]+>', '', title)).strip()
+                        snippet = html_mod.unescape(re.sub(r'<[^>]+>', '', snippets[i])) if i < len(snippets) else ""
+                        pin = chr(0x1F4CC)
+                        lines.append(pin + " " + title_clean[:80] + "\n   " + snippet[:100] + "\n   " + href)
+                    globe = chr(0x1F310)
+                    return globe + " 搜索结果：\n\n" + "\n\n".join(lines)
+            except Exception as e:
+                logger.warning(f"DuckDuckGo搜索失败,切备用: {e}")
+
+            # 备用: Bing
             try:
                 url = "https://www.bing.com/search?q=" + quote(query) + "&setlang=zh-Hans"
                 req = Request(url, headers={
@@ -558,7 +585,7 @@ class ToolExecutor:
             "Content-Type": "application/json",
         }
         body = {
-            "user": {"uid": "cc_voice"},
+            "user": {"uid": "lingxia_voice"},
             "req_params": {
                 "text": text,
                 "speaker": self._VOLC_VOICE_TYPE,
@@ -730,7 +757,85 @@ class ToolExecutor:
         result += "\n⚙️ 音乐生成API配置中，配置后可直接输出音频文件"
         return result
 
-                
+    async def _send_redpacket(self, chat_id, total_amount, count, text="红包"):
+        """Send red packet with inline claim button"""
+        import json, os, time, random
+        
+        rp_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "redpackets.json")
+        try:
+            with open(rp_file) as f:
+                rp_data = json.load(f)
+        except:
+            rp_data = {"packets": [], "counter": 0}
+        
+        rp_data["counter"] += 1
+        pid = "rp_{}".format(rp_data["counter"])
+        
+        amounts = []
+        if count <= 1:
+            amounts = [total_amount]
+        else:
+            remaining = total_amount
+            for i in range(count - 1):
+                max_a = max(0.01, int(remaining / (count - i) * 2 * 100) / 100)
+                a = round(random.uniform(0.01, max_a), 2)
+                amounts.append(a)
+                remaining = round(remaining - a, 2)
+            amounts.append(round(remaining, 2))
+            random.shuffle(amounts)
+        
+        now = time.time()
+        packet = {
+            "id": pid, "chat_id": chat_id,
+            "sender_id": 8223087548, "sender_name": "CC",
+            "total": total_amount, "count": count,
+            "remaining": count,
+            "amounts": [str(a) for a in amounts],
+            "claimed": [],
+            "text": text, "created": now, "expires": now + 86400
+        }
+        rp_data["packets"].append(packet)
+        if len(rp_data["packets"]) > 100:
+            rp_data["packets"] = rp_data["packets"][-80:]
+        with open(rp_file, "w") as f:
+            json.dump(rp_data, f, ensure_ascii=False, indent=2)
+        
+        from telethon import Button
+        buttons = [[Button.inline("领红包", pid)]]
+        msg = "\U0001f9e7 红包来了！\\n{}".format(text)
+        msg += "\\n\\n\U0001f4b0 共 {} 元, {} 个".format(total_amount, count)
+        await self.tc.send_message(chat_id, msg, buttons=buttons)
+        return "sent: {}元/{}个".format(total_amount, count)
+    
+    async def _claim_redpacket(self, packet_id, user_id, user_name, chat_id):
+        """Claim red packet (called from CallbackQuery handler)"""
+        import json, os, time
+        rp_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "redpackets.json")
+        try:
+            with open(rp_file) as f:
+                rp_data = json.load(f)
+        except:
+            return "no data"
+        
+        for p in rp_data["packets"]:
+            if p["id"] != packet_id:
+                continue
+            if p["expires"] < time.time():
+                return "expired"
+            if p["remaining"] <= 0:
+                return "all claimed"
+            for c in p["claimed"]:
+                if c["uid"] == user_id:
+                    return "already claimed"
+            
+            idx = p["count"] - p["remaining"]
+            amount = float(p["amounts"][idx]) if idx < len(p["amounts"]) else 0.01
+            p["remaining"] -= 1
+            p["claimed"].append({"uid": user_id, "name": user_name, "amount": amount, "time": time.time()})
+            
+            with open(rp_file, "w") as f:
+                json.dump(rp_data, f, ensure_ascii=False, indent=2)
+            
             return "{} got {} yuan".format(user_name, amount)
         
         return "not found"
