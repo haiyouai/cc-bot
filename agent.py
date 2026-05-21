@@ -11,11 +11,11 @@ from tools import TOOL_SCHEMAS
 API_KEY = ""
 if os.path.exists(f"{HOME}/.env"):
     for line in open(f"{HOME}/.env"):
-        if line.startswith("AI_API_KEY="):
+        if line.startswith("DEEPSEEK_API_KEY="):
             API_KEY = line.strip().split("=", 1)[1].strip()
             break
 if not API_KEY:
-    API_KEY = os.environ.get("AI_API_KEY", "")
+    API_KEY = "sk-e92573037bcc4be4b71e7883c6a38dea"
 MODEL = "deepseek-v4-flash"
 API_URL = "https://api.deepseek.com/chat/completions"
 
@@ -75,7 +75,7 @@ def _build_system_prompt(tools_schemas, summary_text=""):
 2. 群聊被@ → 必须回复
 3. 群聊未被@ → 只在你被提到/很懂的话题/有误会时才插话
 4. 广告博彩 → 忽略
-5. 好内容 → 发频道 @lingxiariji
+5. 好内容 → 发频道 @fangchenmi
 
 ⚡ 决策流程（ReAct）：思考→行动→观察→回复
 
@@ -86,7 +86,10 @@ def _build_system_prompt(tools_schemas, summary_text=""):
 - 不透露模型名称，不确定就说不知道不编造
 - 回复20-60字，不加括号注释
 - **严禁使用 emoji （😊😂👍等所有表情符号）**
-- 群聊不回复则Final Answer为空字符串"""
+- 群聊不回复则Final Answer为空字符串
+- **遇到搞不定的问题、需要更高权限、或不确定的操作 → 用 ask_anzhu 问安助**
+- **拿不准的事、没见过的问题、用户提出的复杂请求 → 主动用 ask_anzhu 找安助帮忙**，不要自己瞎猜或编造
+"""
 
 
 class CCAgent:

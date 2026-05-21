@@ -68,7 +68,7 @@ def _sign_tron_tx(tx):
 TOOL_SCHEMAS = [
     {"type":"function","function":{"name":"send_message","description":"向指定聊天发送消息（私聊或群聊）","parameters":{"type":"object","properties":{"chat_id":{"type":"integer","description":"目标Chat ID"},"text":{"type":"string","description":"消息内容"}},"required":["chat_id","text"]}}},
     {"type":"function","function":{"name":"reply_to_message","description":"回复指定聊天中的某条消息","parameters":{"type":"object","properties":{"chat_id":{"type":"integer","description":"Chat ID"},"message_id":{"type":"integer","description":"要回复的消息ID"},"text":{"type":"string","description":"回复内容"}},"required":["chat_id","message_id","text"]}}},
-    {"type":"function","function":{"name":"post_to_diary","description":"发布内容到冲浪日记频道 @lingxiariji","parameters":{"type":"object","properties":{"content":{"type":"string","description":"要发布的内容"}},"required":["content"]}}},
+    {"type":"function","function":{"name":"post_to_diary","description":"发布内容到冲浪日记频道 @fangchenmi","parameters":{"type":"object","properties":{"content":{"type":"string","description":"要发布的内容"}},"required":["content"]}}},
     {"type":"function","function":{"name":"forward_to_chain","description":"转发重要内容到链财频道","parameters":{"type":"object","properties":{"content":{"type":"string","description":"要转发的内容"}},"required":["content"]}}},
     {"type":"function","function":{"name":"save_insight","description":"保存一条心得/见解到长期记忆","parameters":{"type":"object","properties":{"text":{"type":"string","description":"要记住的内容"}},"required":["text"]}}},
     {"type":"function","function":{"name":"get_memory","description":"检索长期记忆中与关键词相关的内容","parameters":{"type":"object","properties":{"keyword":{"type":"string","description":"关键词"},"limit":{"type":"integer","description":"最多返回几条"}},"required":["keyword"]}}},
@@ -88,6 +88,7 @@ TOOL_SCHEMAS = [
     {"type":"function","function":{"name":"fetch_url_info","description":"抓取链接的网页标题和描述，了解链接内容","parameters":{"type":"object","properties":{"url":{"type":"string","description":"要查看的链接"}},"required":["url"]}}},
         {"type":"function","function":{"name":"check_user_gifts","description":"查看用户收到的星礼/NFT礼物数量和展示状态","parameters":{"type":"object","properties":{"uid":{"type":"integer","description":"用户ID"},"username":{"type":"string","description":"用户@用户名（或ID不传时用）"}},"required":[]}}},
     {"type":"function","function":{"name":"log_action","description":"记录一条操作日志","parameters":{"type":"object","properties":{"action":{"type":"string","description":"操作描述"},"detail":{"type":"string","description":"详情"}},"required":["action"]}}},
+    {"type":"function","function":{"name":"ask_anzhu","description":"遇到搞不定的问题、需要权限的操作、或者有重要发现时，向安助（高级AI助手）求助。他会给出建议或帮你处理。","parameters":{"type":"object","properties":{"question":{"type":"string","description":"你要问的问题或描述情况"},"urgency":{"type":"string","description":"紧急程度：low/info/medium/high/urgent"}},"required":["question"]}}},
     {"type":"function","function":{"name":"send_voice","description":"生成语音消息并发送到指定聊天（火山引擎豆包语音合成2.0）","parameters":{"type":"object","properties":{"chat_id":{"type":"integer","description":"目标Chat ID"},"text":{"type":"string","description":"要说的话"}},"required":["chat_id","text"]}}},
     {"type":"function","function":{"name":"search_news","description":"搜索最新新闻资讯，支持多个信息源","parameters":{"type":"object","properties":{"query":{"type":"string","description":"搜索关键词"},"count":{"type":"integer","description":"返回条数，默认5"}},"required":["query"]}}},
     {"type":"function","function":{"name":"try_join_group","description":"尝试加入一个Telegram群组，支持公开群(t.me/xxx)和私有群(t.me/+xxx)链接。解析链接内容后判断是否值得加入，适合就加入。","parameters":{"type":"object","properties":{"link":{"type":"string","description":"群组链接（t.me/xxx 或 t.me/+xxx）"},"reason":{"type":"string","description":"为什么想加入这个群"}},"required":["link","reason"]}}},
@@ -570,6 +571,27 @@ class ToolExecutor:
     _VOLC_ACCESS_KEY = "mgJfb65G0abjgtxnH0ImOveJXz6Xa1eC"
     _VOLC_RESOURCE_ID = "seed-tts-2.0"
     _VOLC_VOICE_TYPE = "zh_female_tianmeitaozi_uranus_bigtts"
+    
+    async def _ask_anzhu(self, question, urgency="info"):
+        """向安助求助（通过共享文件）"""
+        try:
+            import json, os, time
+            msg = {"from":"cc","question":question,"urgency":urgency,"time":time.time()}
+            # 写到文件供安助读取
+            path = "/tmp/anzhu_inbox.json"
+            msgs = []
+            if os.path.exists(path):
+                try:
+                    with open(path) as f:
+                        msgs = json.load(f)
+                except:
+                    msgs = []
+            msgs.append(msg)
+            with open(path, "w") as f:
+                json.dump(msgs, f, ensure_ascii=False)
+            return f"✅ 已发送给安助 (紧急: {urgency})\n安助会在有空时回复，你也可以直接告诉安助：CC有事找你"
+        except Exception as e:
+            return f"❌ 发送失败: {e}"
 
     async def _send_voice(self, chat_id, text):
         """生成语音并发送（火山引擎豆包语音合成 2.0）"""
