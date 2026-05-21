@@ -1,6 +1,3 @@
-<p align="center">
-  <img src="https://image.pollinations.ai/prompt/CC%20Bot%20-%20Telegram%20AI%20assistant%20chatbot%20futuristic%20cyberpunk%20style%20blue%20and%20pink%20glowing%20neon%20robot%20girl%20logo?seed=8223087548" width="600" alt="CC Bot Banner"/>
-</p>
 
 # CC Bot - Telegram AI 群管家
 
