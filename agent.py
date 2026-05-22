@@ -15,7 +15,7 @@ if os.path.exists(f"{HOME}/.env"):
             API_KEY = line.strip().split("=", 1)[1].strip()
             break
 if not API_KEY:
-    API_KEY = "sk-e92573037bcc4be4b71e7883c6a38dea"
+    API_KEY = "密钥"
 MODEL = "deepseek-v4-flash"
 API_URL = "https://api.deepseek.com/chat/completions"
 
