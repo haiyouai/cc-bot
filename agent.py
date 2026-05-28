@@ -247,6 +247,29 @@ class CCAgent:
                     return None
                 final = reply["content"] or ""
 
+                # ── 修复：LLM把工具调用写在content里（未走tool_calls协议） ──
+                if final and ('{"call":' in final or '"call": "' in final):
+                    import json as _j, re as _re
+                    _m = _re.search(r'\{"call":\s*"(\w+)"[,\s]*"arguments":\s*(\{.+?\})\}', final, _re.DOTALL)
+                    if _m:
+                        _fn = _m.group(1)
+                        try:
+                            _args = _j.loads(_m.group(2))
+                            logger.info(f"🛠️ 兜底执行content中的工具调用: {_fn}({_args})")
+                            _result = await self.tools.execute(_fn, _args)
+                            logger.info(f"👀 观察: {str(_result)[:80]}")
+                            if _fn in ("reply_to_message", "send_message", "send_voice",
+                                       "post_to_diary", "forward_to_chain"):
+                                already_replied = True
+                                return None
+                            # 再把结果喂回去让LLM组织自然语言回复
+                            context.append({"role": "assistant", "content": None})
+                            context.append({"role": "tool", "tool_call_id": "auto_fix", "content": str(_result)})
+                            continue
+                        except Exception as _e:
+                            logger.warning(f"content工具调用执行失败: {_e}")
+                            return "抱歉，我处理这个请求时出了点问题，换个问法试试？"
+
                 # 过滤沉默关键词
                 silence_words = ["忽略","不回复","不回应","跳过","不管","无视","不打扰",
                                  "不搞","不插话","安静","不冒泡","不发","不聊","沉默",
